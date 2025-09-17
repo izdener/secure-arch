@@ -209,43 +209,162 @@ systemctl enable fstrim.timer
 ```
 ### Initramfs generálás (dracut)
 Adjuk hozzá a kernel modulokat és beállításokat egy fájlhoz.   
-_A_ `base.conf` _név mellett döntöttem, mert nekem ez logikus._
+_A_ `base.conf` _név mellett döntöttem, mert nekem ez logikus. Az i18n-t azért adom hozzá így, hogy bootoláskor betöltse a billentyű
+zetem kiosztását és ne angol kiosztáson kelljen begépelni a jelszavam._
 ```
 nvim /etc/dracut.conf.d/base.conf
 
 hostonly=yes
-add_dracutmodules+=" crypt btrfs "
 uefi=yes
-```
-Generáljuk újra az initramfs-t.
-```
-dracut --force
-```
-#### Rendszer betöltő telepítése (systemd-boot)
-```
-bootctl install
+add_dracutmodules=" crypt btrfs i18n "
+i18n_vars="KEYMAP=hu FONT=lat2-16"
+compress="zstd --fast"
 ```
 A titkosított és titkosítatlan UUIDk mentése változókba
 ```
 CRYPT_UUID=$(blkid -s UUID -o value /dev/nvme0n1p2)
 ROOT_UUID=$(blkid -s UUID -o value /dev/mapper/arch-linux)
 ```
+Hozzunk létre egy cmdline.conf-ot, amiben a kernel betöltési paraméterei vannak
+```
+cat <<EOL > /etc/dracut.conf.d/cmdline.conf
+kernel_cmdline="rd.luks.name=$CRYPT_UUID=cryptroot root=UUID=$ROOT_UUID rootfstype=btrfs rootflags=subvol=@,rw,relatime"
+EOL
+```
+
+
+#### UKI telepítő és eltávolító script
+Hozzunk létre egy scriptet, ami megépíti az UKI-t minden kernel frissítésnél
+```
+nvim /usr/local/bin/dracut-uki-install.sh
+
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+log() {
+    logger -t dracut-uki-install "$*"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+mkdir -p /boot/efi/EFI/Linux
+
+kver=$(ls /usr/lib/modules | grep zen | sort -V | tail -n1 || true)
+
+log "Zen kernel version: $kver"
+
+if [[ -n "$kver" ]]; then
+    log "Generating UKI for ZEN kernel ($kver) >> bootx64.efi..."
+    dracut --force --uefi --kver "$kver" /boot/efi/EFI/Linux/bootx64.efi 2>&1 | while IFS= read -r line; do
+        logger -t dracut-install "$line"
+        echo "$line"
+    done
+fi
+
+log "Dracut kernel installation completed. To view logs check: journalctl -t dracut-uki-install"
+```
+
+Adjunk hozzá egy scriptet, ami törli az UKI-t.
+_Ez ahhot kell, hogy újat csinálhassunk a helyére._
+```
+nvim /usr/local/bin/dracut-uki-remove.sh
+
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() {
+    logger -t dracut-uki-remove "$*"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+EFI_DIR="/boot/efi/EFI/Linux"
+
+if [[ -f "$EFI_DIR/bootx64.efi" ]]; then
+    rm -f "$EFI_DIR/bootx64.efi"
+    log "Removed bootx64.efi"
+else
+    log "No bootx64.efi to remove"
+fi
+
+log "Dracut kernel removal completed. To view logs check: journalctl -t dracut-uki-remove"
+```
+Tegyük futtathatóvá a scripteket.
+```
+chmod +x /usr/local/bin/dracut-*
+```
+#### Pacman hookok a telepítő/eltávolító scriptekhez
+Adjunk ezekhez pacman hookakat - hozzunk létre egy hook könyvtárat.
+```
+mkdir /etc/pacman.d/hooks
+```
+Telepítési pacman-hook
+```
+nvim /etc/pacman.d/hooks/90-dracut-uki-install.hook
+
+[Trigger]
+Type = Path
+Operation = Install
+Operation = Upgrade
+Target = usr/lib/modules/*/pkgbase
+
+[Action]
+Description = Updating linux-zen EFI images
+When = PostTransaction
+Exec = /usr/bin/env bash /usr/local/bin/dracut-uki-install.sh
+Depends = dracut
+NeedsTargets
+```
+
+Eltávolítási pacman-hook
+```
+nvim /etc/pacman.d/hooks/60-dracut-remove.hook
+
+[Trigger]
+Type = Path
+Operation = Remove
+Target = usr/lib/modules/*/pkgbase
+
+[Action]
+Description = Removing linux EFI image
+When = PreTransaction
+Exec = /usr/local/bin/dracut-uki-remove.sh
+NeedsTargets
+```
+
+#### Rendszer betöltő telepítése (systemd-boot)
+```
+bootctl install --esp-path=/boot/efi
+```
 Kernel boot entry készítése
 ```
-cat <<EOL > /boot/loader/entries/arch.conf
-title   Arch Linux (linux-zen)
-linux   /vmlinuz-linux-zen
-initrd  /initramfs-linux-zen.img
-options rd.luks.name=$CRYPT_UUID=cryptroot root=UUID=$ROOT_UUID rootflags=subvol=@ rw
+cat <<EOL > /boot/efi/loader/entries/arch.conf
+title   Arch Linux (Zen UKI)
+linux   /EFI/Linux/bootx64.efi
 EOL
 ```
 loader.conf szerkesztése
 ```
-cat <<EOL > /boot/loader/loader.conf
+cat <<EOL > /boot/efi/loader/loader.conf
 default arch
 timeout 3
 editor no
 EOL
+```
+Systemd-boot pacman-hook
+```
+nvim /etc/pacman.d/hooks/systemd-boot.hook
+
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = systemd
+
+[Action]
+Description = Updating systemd-boot on ESP...
+When = PostTransaction
+Exec = /usr/bin/bootctl --esp-path=/boot/efi update
+
 ```
 
 ### Teljes asztali környezet telepítése - mesa, pipewire, Hyprland
