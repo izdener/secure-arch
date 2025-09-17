@@ -386,21 +386,41 @@ efibootmgr -o 0001,0000,0002
 ```
 Mindez attól függ, mit szeretnél bootolni - közvetlenül az UKIt, vagy a Systemd-bootmanagert. :)
 
-### Teljes asztali környezet telepítése - mesa, pipewire, Hyprland
+# Teljes asztali környezet telepítése és testreszabása | _mesa, pipewire, Hyprland_
 ```
 pacman -S \
 mesa lib32-mesa vulkan-radeon libva-mesa-driver \
 xf86-video-amdgpu pipewire pipewire-audio \
 pipewire-alsa pipewire-pulse wireplumber \
-alsa-utils wiremix greetd tuigreet \
-hyprland xdg-desktop-portal-hyprland xdg-desktop-portal \
-xdg-desktop-portal-gtk wlroots wayland wayland-protocols \
-qt5-wayland qt6-wayland gtk3 xdg-utils hyprlock hyprpicker \
-wofi waybar polkit polkit-gnome elogind dbus uwsm kitty \
+alsa-utils wiremix \
+wayland wayland-protocols xdg-desktop-portal \
+xdg-desktop-portal-gtk \
+hyprland xdg-desktop-portal-hyprland hyprlock \
+hyprpicker qt5-wayland qt6-wayland gtk3 xdg-utils \
+rofi waybar polkit hyprpolkitagent kitty \
 ripgrep tldr man-db man-pages bluez bluez-utils \
-fcitx5 fcitx5-im fcitx5-configtool fcitx5-gtk fcitx5-qt \
-ttf-firacode-nerd \
-journalctl-tui bluetui btop
+ttf-firacode-nerd bluetui btop
 ```
+---
+
+## Login manager választás:
+
+Ha sddm mellett döntesz
+```
+pacman -S sddm
+```
+Billentyűzetkiosztás beállítása
+```
+mkdir -p /etc/sddm.conf.d/
+
+nvim /etc/sddm.conf.d/00-keyboard.conf
+
+[General]
+InputMethod=keyboard
+
+[Keyboard]
+Layout=hu
+```
+`systemctl enable sddm.service`
 
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
