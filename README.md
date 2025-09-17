@@ -364,8 +364,27 @@ Target = systemd
 Description = Updating systemd-boot on ESP...
 When = PostTransaction
 Exec = /usr/bin/bootctl --esp-path=/boot/efi update
+```
+
+### Frissítsük az EFI Boot Entry-t manuálisan
+Listázzuk ki az elérhető EFI entryket:
+```
+efibootmgr
+```
+Ha NEM LÁTOD a systemd-boot entryt, akkor manuálisan hozzá kell adni:
+```
+efibootmgr -c -d /dev/nvme0n1 -p 1 -L "Arch Linux" -l '\EFI\systemd\systemd-bootx64.efi'
+```
+Az `efibootmgr -o`-val változtatni is tudod a bejegyzések sorrendjét:
 
 ```
+efibootmgr -o 0000,0001,0002
+
+vagy
+
+efibootmgr -o 0001,0000,0002
+```
+Mindez attól függ, mit szeretnél bootolni - közvetlenül az UKIt, vagy a Systemd-bootmanagert. :)
 
 ### Teljes asztali környezet telepítése - mesa, pipewire, Hyprland
 ```
