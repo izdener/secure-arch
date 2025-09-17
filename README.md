@@ -62,7 +62,7 @@ Ezt a műveletet `parted`, `fdisk`, vagy mint itt, `cfdisk` használatával is e
 `cfdisk /dev/nvme0n1`:  
 > Válassz GPT-t (ha még nincs), válaszd: gpt
 > Hozd létre az ESP partíciót: New
-> - Méret: 1024M  
+> - Méret: 2048M  
 > - Típus: válaszd EFI System
 > 
 > Hozd létre a root (LUKS) partíciót: New
@@ -113,7 +113,7 @@ umount /mnt
 
 _Csatolási lehetőségek elmentése többször felhasználható bash alias-ban._
 ```
-BTRFS_OPTS="rw,noatime,compress=zstd:3,ssd,discard=async,space_cache=v2,commit=120"
+BTRFS_OPTS="rw,relatime,compress=zstd:3,ssd,discard=async,space_cache=v2,commit=120"
 ```
 Gyökér subvolume (@) felcsatolása a /mnt-re.
 ```
@@ -151,7 +151,7 @@ pacman-key --populate
 ```
 ### Alap rendszer telepítése
 ```
-pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware btrfs-progs amd-ucode sudo pacman neovim dracut efibootmgr systemd-boot sbsigntools git binutils openssh networkmanager
+pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware btrfs-progs amd-ucode sudo pacman neovim dracut efibootmgr systemd efivar sbsigntools git binutils openssh networkmanager
 ```
 Hozzuk létre az fstab-ot.
 ```
@@ -178,7 +178,7 @@ _Kommenteld ki a nyelve(ke)t amit használni szeretnél._
 ```
 nvim /etc/locale.gen
 locale-gen
-echo "LANG=en_US.UTF-8" >> /etc/locale.conf`
+echo "LANG=en_US.UTF-8" >> /etc/locale.conf
 ```
 Állítsuk be a billentyűzet kiosztást.
 ```
