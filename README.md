@@ -389,38 +389,37 @@ Mindez attól függ, mit szeretnél bootolni - közvetlenül az UKIt, vagy a Sys
 # Teljes asztali környezet telepítése és testreszabása | _mesa, pipewire, Hyprland_
 ```
 pacman -S \
-mesa lib32-mesa vulkan-radeon libva-mesa-driver \
-xf86-video-amdgpu pipewire pipewire-audio \
-pipewire-alsa pipewire-pulse wireplumber \
-alsa-utils wiremix \
+mesa lib32-mesa mesa-utils vulkan-radeon lib32-vulkan-radeon \
+libva-mesa-driver lib32-libva-mesa-driver gamemode lib32-gamemode \
+xf86-input-libinput xf86-video-amdgpu vulkan-tools \
+vulkan-validation-layers sof-firmware \
+pipewire lib32-pipewire lib32-alsa-plugins \
+pipewire-audio pipewire-alsa alsa-utils  \
+pipewire-pulse wireplumber wiremix \
 wayland wayland-protocols xdg-desktop-portal \
-xdg-desktop-portal-gtk \
+xdg-desktop-portal-gtk xdg-user-dirs \
 hyprland xdg-desktop-portal-hyprland hyprlock \
 hyprpicker qt5-wayland qt6-wayland gtk3 xdg-utils \
-rofi waybar polkit hyprpolkitagent kitty \
+waybar polkit hyprpolkitagent kitty greetd greetd-tuigreet \
 ripgrep tldr man-db man-pages bluez bluez-utils \
 ttf-firacode-nerd bluetui btop
 ```
 ---
 
-## Login manager választás:
+## Login manager TUI-greet (greetd frontend)
+Állítsuk be a greetd konfigurációs fájlját hogy lássa az összes wayland session-t.
 
-Ha sddm mellett döntesz
 ```
-pacman -S sddm
-```
-Billentyűzetkiosztás beállítása
-```
-mkdir -p /etc/sddm.conf.d/
+vt = 1
 
-nvim /etc/sddm.conf.d/00-keyboard.conf
+[default_session]
+command = "tuigreet --greetd -w 80 --sessions /usr/share/wayland-sessions"
 
-[General]
-InputMethod=keyboard
-
-[Keyboard]
-Layout=hu
+user = "greeter"
 ```
-`systemctl enable sddm.service`
+Engedélyezzük a greetd szervizt
+```
+systemctl enable greetd.service
+```
 
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
