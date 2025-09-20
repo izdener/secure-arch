@@ -519,6 +519,12 @@ systemctl --user daemon-reload
 systemctl --user enable m-postlogin.service
 
 ```
+Nézd meg, hogy a Linger=yes szerepel-e a loginctl-ben.
+```
+loginctl show-user $USER
 
+ha nem:
 
+sudo loginctl enable-linger $USER
+```
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
