@@ -497,6 +497,10 @@ if [ -n "$USER_LOGGED_IN" ]; then
   runuser -l "$USER_LOGGED_IN" -c "ddcutil setvcp D6 01 --display 1"
 fi
 ```
+Tegyük futtathatóva:
+```
+chmod +x /usr/local/bin/m-postlogin.sh
+``` 
 Hozzunk létre egy systemd unitot ehhez is.
 ```
 # /etc/systemd/system/monitor-postlogin.service
