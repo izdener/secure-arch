@@ -490,12 +490,8 @@ van a gépen, mindenkinél működni fog._
 nvim /usr/local/bin/m-postlogin.sh
 
 #!/bin/bash
+ddcutil setvcp D6 01 --display 1
 
-USER_LOGGED_IN=$(loginctl list-sessions | awk '$2 != "root" {print $3}' | head -n1)
-
-if [ -n "$USER_LOGGED_IN" ]; then
-  runuser -l "$USER_LOGGED_IN" -c "ddcutil setvcp D6 01 --display 1"
-fi
 ```
 Tegyük futtathatóva:
 ```
@@ -503,23 +499,25 @@ chmod +x /usr/local/bin/m-postlogin.sh
 ``` 
 Hozzunk létre egy systemd unitot ehhez is.
 ```
-# /etc/systemd/system/m-postlogin.service
+nvim ~/.config/systemd/user/m-postlogin.service
+
 [Unit]
-Description=Monitor on after login for all users
-After=graphical.target
-Wants=multi-user.target
-ConditionUser=!root
+Description=Enable second monitor after login
+After=graphical-session.target
 
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/m-postlogin.sh
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 ```
 Engedélyezzük:
 ```
-systemctl enable m-postlogin.service
+systemctl --user daemon-reexec
+systemctl --user daemon-reload
+systemctl --user enable m-postlogin.service
+
 ```
 
 
