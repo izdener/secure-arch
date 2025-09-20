@@ -503,7 +503,7 @@ chmod +x /usr/local/bin/m-postlogin.sh
 ``` 
 Hozzunk létre egy systemd unitot ehhez is.
 ```
-# /etc/systemd/system/monitor-postlogin.service
+# /etc/systemd/system/m-postlogin.service
 [Unit]
 Description=Monitor on after login for all users
 After=graphical.target
