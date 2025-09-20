@@ -402,6 +402,7 @@ hyprland xdg-desktop-portal-hyprland hyprlock \
 hyprpicker qt5-wayland qt6-wayland gtk3 xdg-utils \
 waybar polkit hyprpolkitagent kitty greetd greetd-tuigreet \
 ripgrep tldr man-db man-pages bluez bluez-utils \
+ddcutil fbset \
 ttf-firacode-nerd bluetui btop
 ```
 ---
@@ -410,10 +411,12 @@ ttf-firacode-nerd bluetui btop
 Állítsuk be a greetd konfigurációs fájlját hogy lássa az összes wayland session-t.
 
 ```
+nvim /etc/greetd/config.toml
+
 vt = 1
 
 [default_session]
-command = "tuigreet --greetd -w 80 --sessions /usr/share/wayland-sessions"
+command = "tuigreet -w 80 --sessions /usr/share/wayland-sessions"
 
 user = "greeter"
 ```
@@ -421,5 +424,99 @@ Engedélyezzük a greetd szervizt
 ```
 systemctl enable greetd.service
 ```
+### Ha kettő vagy több monitort használsz
+Észre fogod venni, hogy csak egy frame buffer van mind a kettő (vagy több) monitorodra és elég bután néz ki az,  
+hogy a 2/4K-s monitorodon nem jó a loginmanager mérete. Ezt a `ddcutil` és `fbset` programok  
+használatával tudod kiküszöbölni. Szép megoldás? Nem. De határozottan működik.  
+_Ha két monitorod van, akkor egyet lekapcsolunk a bejelentkezésig. Ez készeríti majd a frame buffert hogy  
+az elérhető monitoron a legnagyobb felbontást használja. Nekem egy HD és egy 2K-s monitorom van,  
+ezen demonstrálom mit kell tenni._
+
+**1. Ha eddig nem tetted meg, telepítsd a szükséges programokat**
+```
+pacman -S ddcutil fbset
+```
+**2. Szerezzünk jogosulságokat az `i2c`-hez**
+```
+usermod -aG i2c $USER
+```
+**2.1. Nézzük meg hogy melyik monitor a display 1 vagy dispaly 2 (stb).**
+```
+ddcutil detect
+```
+**3. Hozzunk létre egy scriptet, ami standby módba teszi az egyik monitort login előtt**  
+_!!Nálam ez a HD lesz!!_
+```
+nvim /usr/local/bin/m-prelogin.sh
+
+#!/bin/sh
+
+# Monitor 1 (HD) - standby
+ddcutil setvcp D6 04 --display 1
+
+# Fő monitor felbontása
+fbset -xres 2560 -yres 1440
+
+```
+Tegyük futtathatóvá a scriptet
+```
+chmod +x /usr/local/bin/m-prelogin.sh
+```
+Hozzunk létre hozzá egy systemd unitot
+```
+nvim /etc/systemd/system/m-prelogin.service
+
+[Unit]
+Description=Set monitor standby and resolution before login
+Before=systemd-user-sessions.service
+After=graphical.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/m-prelogin.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+```
+Tegyük aktívvá:
+```
+sudo systemctl enable m-prelogin.service
+```
+**4. Hozzunk létre egy scriptet ami visszakapcsolja a monitort login után**
+_Ezt úgy állítottam be, hogy lekérdezze ki jelentkezik be -így ha több felhazsnáló is  
+van a gépen, mindenkinél működni fog._
+```
+nvim /usr/local/bin/m-postlogin.sh
+
+#!/bin/bash
+
+USER_LOGGED_IN=$(loginctl list-sessions | awk '$2 != "root" {print $3}' | head -n1)
+
+if [ -n "$USER_LOGGED_IN" ]; then
+  runuser -l "$USER_LOGGED_IN" -c "ddcutil setvcp D6 01 --display 1"
+fi
+```
+Hozzunk létre egy systemd unitot ehhez is.
+```
+# /etc/systemd/system/monitor-postlogin.service
+[Unit]
+Description=Monitor on after login for all users
+After=graphical.target
+Wants=multi-user.target
+ConditionUser=!root
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/m-postlogin.sh
+
+[Install]
+WantedBy=multi-user.target
+```
+Engedélyezzük:
+```
+systemctl enable m-postlogin.service
+```
+
 
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
