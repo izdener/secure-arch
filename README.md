@@ -468,8 +468,8 @@ nvim /etc/systemd/system/m-prelogin.service
 
 [Unit]
 Description=Set monitor standby and resolution before login
-Before=systemd-user-sessions.service
-After=graphical.target
+After=multi-user.target
+Before=graphical.target
 
 [Service]
 Type=oneshot
