@@ -406,6 +406,7 @@ greetd-tuigreet uwsm ttf-nerd-fonts-symbols ttf-fira-code-nerd \
 tldr tree cliphist fd fzf ripgrep btop btrfs-progs \
 snapper xdg-utils xdg-desktop-portal xdg-user-dirs \
 xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
+dosfstools \
 \
 man-db man-pages tldr kitty neovim lazygit \
 lua-language-server pyright keepassxc obsidian yazi \
@@ -446,6 +447,7 @@ pacman -S \
 tldr tree cliphist fd fzf ripgrep btop btrfs-progs \
 snapper xdg-utils xdg-desktop-portal xdg-user-dirs \
 xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
+dosfstools
 ```
 
 **Fejlesztői és Termelékenységi Eszközök**
