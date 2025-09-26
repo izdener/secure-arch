@@ -387,24 +387,84 @@ efibootmgr -o 0001,0000,0002
 Mindez attól függ, mit szeretnél bootolni - közvetlenül az UKIt, vagy a Systemd-bootmanagert. :)
 
 # Teljes asztali környezet telepítése és testreszabása | _mesa, pipewire, Hyprland_
+
+_az egész rendszer egyben:_
 ```
 pacman -S \
 mesa lib32-mesa mesa-utils vulkan-radeon lib32-vulkan-radeon \
-libva-mesa-driver lib32-libva-mesa-driver gamemode lib32-gamemode \
-xf86-input-libinput xf86-video-amdgpu vulkan-tools \
-vulkan-validation-layers sof-firmware \
-pipewire lib32-pipewire lib32-alsa-plugins \
-pipewire-audio pipewire-alsa alsa-utils  \
-pipewire-pulse wireplumber wiremix \
-wayland wayland-protocols xdg-desktop-portal \
-xdg-desktop-portal-gtk xdg-user-dirs \
-hyprland xdg-desktop-portal-hyprland hyprlock \
-hyprpicker qt5-wayland qt6-wayland gtk3 xdg-utils \
-waybar polkit hyprpolkitagent kitty greetd greetd-tuigreet \
-ripgrep tldr man-db man-pages bluez bluez-utils \
-ddcutil fbset \
-ttf-firacode-nerd bluetui btop
+vulkan-tools vulkan-validation-layers libva-mesa-driver \
+lib32-libva-mesa-driver xf86-input-libinput xf86-video-amdgpu \
+\
+bluez bluez-utils bluetui qutebrowser zen-browser-bin \
+rpcbind openssh \
+\
+hyprland hyprlock hyprpicker hyprpolkitagent \
+wayland wayland-protocols qt5-wayland qt6-wayland \
+gtk3 waybar rofi wofi polkit polkit-gnome greetd \
+greetd-tuigreet uwsm ttf-nerd-fonts-symbols ttf-fira-code-nerd \
+\
+tldr tree cliphist fd fzf ripgrep btop btrfs-progs \
+snapper xdg-utils xdg-desktop-portal xdg-user-dirs \
+xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
+\
+man-db man-pages tldr kitty neovim lazygit \
+lua-language-server pyright keepassxc obsidian yazi \
+\
+gamemode lib32-gamemode steam lib32-alsa-plugins lib32-libpulse \
+pipewire pipewire-alsa pipewire-audio pipewire-pulse wireplumber \
+wiremix alsa-utils gst-libav gst-plugins-bad gst-plugins-good \
+sof-firmware gst-plugins-ugly obs-studio vesktop-bin
 ```
+
+## Külön modulokban:
+**Grafikus meghajtók (mesa, vulkan driverek)**
+```
+pacman -S \
+mesa lib32-mesa mesa-utils vulkan-radeon lib32-vulkan-radeon \
+vulkan-tools vulkan-validation-layers libva-mesa-driver \
+lib32-libva-mesa-driver xf86-input-libinput xf86-video-amdgpu
+```
+
+**Hálózatkezelés és böngészők**
+```
+pacman -S \
+bluez bluez-utils bluetui qutebrowser zen-browser-bin \
+rpcbind openssh
+```
+
+**Grafikus felület és Ablakkezelés**
+```
+hyprland hyprlock hyprpicker hyprpolkitagent \
+wayland wayland-protocols qt5-wayland qt6-wayland \
+gtk3 waybar rofi wofi polkit polkit-gnome greetd \
+greetd-tuigreet uwsm ttf-nerd-fonts-symbols ttf-fira-code-nerd
+```
+
+**Rendszereszközök/Segédprogramok**
+```
+pacman -S \
+tldr tree cliphist fd fzf ripgrep btop btrfs-progs \
+snapper xdg-utils xdg-desktop-portal xdg-user-dirs \
+xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
+```
+
+**Fejlesztői és Termelékenységi Eszközök**
+```
+pacman -S \
+man-db man-pages tldr kitty neovim lazygit \
+lua-language-server pyright keepassxc obsidian yazi
+```
+
+**Játékok, multimédia, kommunikáció**
+```
+pacman -S \
+gamemode lib32-gamemode steam lib32-alsa-plugins lib32-libpulse \
+pipewire pipewire-alsa pipewire-audio pipewire-pulse wireplumber \
+wiremix alsa-utils gst-libav gst-plugins-bad gst-plugins-good \
+sof-firmware gst-plugins-ugly obs-studio vesktop-bin
+```
+
+
 ---
 
 ## Login manager TUI-greet (greetd frontend)
