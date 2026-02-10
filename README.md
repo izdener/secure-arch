@@ -590,3 +590,5 @@ ha nem:
 sudo loginctl enable-linger $USER
 ```
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
+
+(obs-gamecapture env OBS_VKCAPTURE=1 LD_PRELOAD="" XKB_DEFAULT_LAYOUT=hu gamescope -w 2560 -h 1440 -W 2560 -H 1440 -f --force-grab-cursor -- %command%)
