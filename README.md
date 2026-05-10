@@ -185,7 +185,7 @@ pacman-key --populate
 ```
 ### Alap rendszer telepítése
 ```
-pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware btrfs-progs snapper limine amd-ucode sudo pacman neovim efibootmgr systemd efivar sbsigntools git binutils openssh networkmanager
+pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware btrfs-progs snapper snap-pac limine amd-ucode sudo pacman neovim efibootmgr systemd efivar sbsigntools git binutils openssh networkmanager
 ```
 Hozzuk létre az fstab-ot.
 ```
