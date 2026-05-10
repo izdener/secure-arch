@@ -5,23 +5,15 @@
    - [hyprland](https://hypr.land/): Modern, látványos Wayland-kompozitor.
    - [secure boot](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot): Biztonsági funkció, amely csak megbízható, aláírt szoftverek elindítását engedélyezi rendszerindításkor.
    - [apparmor](https://wiki.archlinux.org/title/AppArmor): Az AppArmor egy kötelező hozzáférés-vezérlési (MAC) rendszer, amely a Linux Security Modules (LSM) keretrendszerre épül.
+
 ## Arch telepítő eszköz létrehozása
 - A hivatalos telepítési útmutatóra folyamatosan hívatkozni fogok, itt a [linkje](https://wiki.archlinux.org/title/Installation_guide).
 - Szerezd be a telepítőképet innen: [Arch Linux letöltés](https://archlinux.org/download/)
 - Ellenőrizd a letöltött Arch ISO fájl digitális aláírását (lásd az Arch telepítési útmutató 1.2-es pontját).
 - Írd ki az ISO fájlt egy USB meghajtóra - én a [Ventoy](https://www.ventoy.net/en/index.html)t ajánlom.
 - Majd az elkészült USB eszközt helyezd be a gépbe amire telepíteni szeretnél, és bootold be róla az Arhc linuxot.
+
 ## Rendszer előkészítése Arch ISO-val
-### Ha távolról, SSH-n keresztül szeretnél bejelentkezni a célgépre [elhagyható]
-Állíts be jelszót a root felhasználónak;  
-```
-passwd
-```
-majd ellenőrizd, hogy az SSH-szolgáltatás fut-e.
-```
-systemctl status sshd
-```
-_Ha nem fut, indítsd el így:_ `systemctl start sshd`.
 ### Billentyűzetkiosztás beállítása (alapértelmezetten amerikai – US)
 Az elérhető kiosztások listázása;
 ```
@@ -31,12 +23,54 @@ localectl list-keymaps
 ```
 loadkeys <a kívánt kiosztás neve>
 ```
-### Csatlakozás az internethez 
-Használhatod az `iwctl` segédprogramot Wi-Fi kapcsolathoz;  
+### Hálózat Beállítása (WiFi)
+Az iwctl paranccsal tudunk felkapcsolódni vezetéknélküli hálózatra.
 ```
-ping -c 2 archlinux.org
+iwctl
 ```
-_Ellenőrizd a kapcsolatot nézd meg az IP-címedet:_ `ip addr show` _— ezután már készen állsz az SSH kapcsolatra is._
+Először be kell kapcsolnunk az adaptert (ennek általában phy0 a neve, azért érdemes ellenőrizni).
+```
+adapter list
+
+adapter phy0 set-property Powered on
+
+station wlan0 scan
+
+station wlan0 get-networks
+
+station wlan0 connect "HálózatNeve"
+
+exit
+```
+Ezután csak be kell írnod a jelszót és kész is vagy.
+(_Ha esetleg valami oknál fogva makacskodna a wifi adapter, ezzel a paranccsal unlbock-olni lehet: "rfkill unblock wifi". Ezuán próbáld újra._
+
+Ellenőrizd hogy élő-e a kapcsolat:
+```
+ping google.com
+```
+
+#### Ha távolról, SSH-n keresztül szeretnél bejelentkezni a célgépre [elhagyható]
+Állíts be jelszót a root felhasználónak;  
+```
+passwd
+```
+majd ellenőrizd, hogy az SSH-szolgáltatás fut-e.
+```
+systemctl status sshd
+```
+_Ha nem fut, indítsd el így:_ `systemctl start sshd`.
+
+Egy másik gépről tusz ssh-val csatlakozni, ha esetleg így könnyebb a telepítés. Ezzel a paranccsal meg tudod nézni, mi a géped ip-címe:
+```
+ip addr show
+```
+A másik gépedről:
+```
+ssh root@192.168.1.XXX
+```
+Itt hozzá kell adnod a kulcsot az ismert host-ok listájához, majd meg kell adnod a jelszót, amit a passwd paranccsal készítettél. A további lépéseket már a másik gépedről tudod majd folytatni.
+
 ### Időzóna beállítása
 Időzónák listázása;
 ```
