@@ -241,173 +241,76 @@ usermod -aG wheel A_TE_NEVED
 systemctl enable NetworkManager # a kapitalizáció fontos!
 systemctl enable fstrim.timer
 ```
-### Initramfs generálás (dracut)
-Adjuk hozzá a kernel modulokat és beállításokat egy fájlhoz.   
-_A_ `base.conf` _név mellett döntöttem, mert nekem ez logikus. Az i18n-t azért adom hozzá így, hogy bootoláskor betöltse a billentyű
-zetem kiosztását és ne angol kiosztáson kelljen begépelni a jelszavam._
-```
-nvim /etc/dracut.conf.d/base.conf
+### Initramfs generálás (mkinitcpio)
 
-hostonly=yes
-uefi=yes
-add_dracutmodules=" crypt btrfs i18n "
-i18n_vars="KEYMAP=hu FONT=lat2-16"
-compress="zstd --fast"
-```
 A titkosított és titkosítatlan UUIDk mentése változókba
 ```
 CRYPT_UUID=$(blkid -s UUID -o value /dev/nvme0n1p2)
 ROOT_UUID=$(blkid -s UUID -o value /dev/mapper/arch-linux)
 ```
-Hozzunk létre egy cmdline.conf-ot, amiben a kernel betöltési paraméterei vannak
+Hozzunk létre a kernel cmdline beállítási fájlt, amiben a kernel betöltési paraméterei vannak
 ```
-cat <<EOL > /etc/dracut.conf.d/cmdline.conf
-kernel_cmdline="rd.luks.name=$CRYPT_UUID=cryptroot root=UUID=$ROOT_UUID rootfstype=btrfs rootflags=subvol=@,rw,relatime"
+cat <<EOL > /etc/kernel/cmdline
+rd.luks.name=$CRYPT_UUID=arch-linux root=UUID=$ROOT_UUID rootfstype=btrfs rootflags=subvol=@,compress=zstd:3,relatime rw quiet splash
 EOL
 ```
 
-
-#### UKI telepítő és eltávolító script
-Hozzunk létre egy scriptet, ami megépíti az UKI-t minden kernel frissítésnél
+Az `/etc/mkinitcpio.conf` fájlban ezeken a helyeken kell beállításokat módosítani:
+_Hozzák kell adni a btrfs-t a MODULES-hoz._
 ```
-nvim /usr/local/bin/dracut-uki-install.sh
+MODULES=(btrfs)
+```
+_A HOOKS-hoz ezeket kell hozzáadni. (Systemd hoohkokat használunk, természetesen ezek helyett lehet az alap rendszer hookokat is.)_
+```
+HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems resume fsck)
+```
+Hozzuk létre az UKIk tárolására a Linux mappát az esp-n.
+```
+mkdir -p /efi/EFI/Linux
+```
+Generáljuk újra a kerneleket:
+```
+mkinitcpio -P
+```
+Ha minden jól ment, akkor létre is hoztuk a zen és a fallback uki-t is! (`ls /efi/EFI/Linux` és ott látnunk kell az `arch-linux-zen.efi` és az `arch-linux-zen-fallback.efi` fájlokat!)
 
-#!/usr/bin/env bash
+#### Rendszer betöltő telepítése (Limine)
+A `pacstrap` paranccsal már telepítettük a limine-t, így most már csak dolgoznunk kell vele. Először is létre kell hoznunk neki egy mappát, és át kell másolnunk a bootloader fájlt:
 
-set -euo pipefail
+```
+mkdir -p /efi/EFI/arch-limine
 
-log() {
-    logger -t dracut-uki-install "$*"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-}
-
-mkdir -p /boot/efi/EFI/Linux
-
-kver=$(ls /usr/lib/modules | grep zen | sort -V | tail -n1 || true)
-
-log "Zen kernel version: $kver"
-
-if [[ -n "$kver" ]]; then
-    log "Generating UKI for ZEN kernel ($kver) >> bootx64.efi..."
-    dracut --force --uefi --kver "$kver" /boot/efi/EFI/Linux/bootx64.efi 2>&1 | while IFS= read -r line; do
-        logger -t dracut-install "$line"
-        echo "$line"
-    done
-fi
-
-log "Dracut kernel installation completed. To view logs check: journalctl -t dracut-uki-install"
+cp /usr/share/limine/BOOTX64.EFI /efi/EFI/arch-limine/
 ```
 
-Adjunk hozzá egy scriptet, ami törli az UKI-t.
-_Ez ahhot kell, hogy újat csinálhassunk a helyére._
-```
-nvim /usr/local/bin/dracut-uki-remove.sh
+Létre kell hoznunk egy konfigurációs fájlt ahhoz, hogy az UKI-kat lássa és be is tudja tölteni. (_A systemd-boottal ellentétben, a kernelek keresése nem automatikus!_)
 
-#!/usr/bin/env bash
-set -euo pipefail
+```
+nvim /efi/EFI/arch-limine/limine.conf
+```
+Ezt másoljuk bele a fájlba:
+```
+timeout: 5
 
-log() {
-    logger -t dracut-uki-remove "$*"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
-}
+/Arch Linux (Zen UKI)
+    protocol: efi_chainload
+    image_path: boot():/EFI/Linux/arch-linux-zen.efi
 
-EFI_DIR="/boot/efi/EFI/Linux"
-
-if [[ -f "$EFI_DIR/bootx64.efi" ]]; then
-    rm -f "$EFI_DIR/bootx64.efi"
-    log "Removed bootx64.efi"
-else
-    log "No bootx64.efi to remove"
-fi
-
-log "Dracut kernel removal completed. To view logs check: journalctl -t dracut-uki-remove"
+/Arch Linux (Zen Fallback UKI)
+    protocol: efi_chainload
+    image_path: boot():/EFI/Linux/arch-linux-zen-fallback.efi
 ```
-Tegyük futtathatóvá a scripteket.
-```
-chmod +x /usr/local/bin/dracut-*
-```
-#### Pacman hookok a telepítő/eltávolító scriptekhez
-Adjunk ezekhez pacman hookakat - hozzunk létre egy hook könyvtárat.
-```
-mkdir /etc/pacman.d/hooks
-```
-Telepítési pacman-hook
-```
-nvim /etc/pacman.d/hooks/90-dracut-uki-install.hook
-
-[Trigger]
-Type = Path
-Operation = Install
-Operation = Upgrade
-Target = usr/lib/modules/*/pkgbase
-
-[Action]
-Description = Updating linux-zen EFI images
-When = PostTransaction
-Exec = /usr/bin/env bash /usr/local/bin/dracut-uki-install.sh
-Depends = dracut
-NeedsTargets
-```
-
-Eltávolítási pacman-hook
-```
-nvim /etc/pacman.d/hooks/60-dracut-remove.hook
-
-[Trigger]
-Type = Path
-Operation = Remove
-Target = usr/lib/modules/*/pkgbase
-
-[Action]
-Description = Removing linux EFI image
-When = PreTransaction
-Exec = /usr/local/bin/dracut-uki-remove.sh
-NeedsTargets
-```
-
-#### Rendszer betöltő telepítése (systemd-boot)
-```
-bootctl install --esp-path=/boot/efi
-```
-Kernel boot entry készítése
-```
-cat <<EOL > /boot/efi/loader/entries/arch.conf
-title   Arch Linux (Zen UKI)
-linux   /EFI/Linux/bootx64.efi
-EOL
-```
-loader.conf szerkesztése
-```
-cat <<EOL > /boot/efi/loader/loader.conf
-default arch
-timeout 3
-editor no
-EOL
-```
-Systemd-boot pacman-hook
-```
-nvim /etc/pacman.d/hooks/systemd-boot.hook
-
-[Trigger]
-Type = Package
-Operation = Install
-Operation = Upgrade
-Target = systemd
-
-[Action]
-Description = Updating systemd-boot on ESP...
-When = PostTransaction
-Exec = /usr/bin/bootctl --esp-path=/boot/efi update
-```
+(Ha a későbbiekben bármi mást - mondjuk efi-shell-t vagy memtestet akarunk hozzáadni, azokat is itt fogjuk tudni megtenni.)
 
 ### Frissítsük az EFI Boot Entry-t manuálisan
 Listázzuk ki az elérhető EFI entryket:
 ```
 efibootmgr
 ```
-Ha NEM LÁTOD a systemd-boot entryt, akkor manuálisan hozzá kell adni:
+Ha NEM LÁTOD a limine entry-t, akkor hozzá kell adni manuálisan:
 ```
 efibootmgr -c -d /dev/nvme0n1 -p 1 -L "Arch Linux" -l '\EFI\systemd\systemd-bootx64.efi'
+efibootmgr -c -d /dev/nvme0n1 -p 1 -L "Arch Linux Limine Boot Loader" -l '\EFI\arch-limine\BOOTX64.EFI' --unicode
 ```
 Az `efibootmgr -o`-val változtatni is tudod a bejegyzések sorrendjét:
 
