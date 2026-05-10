@@ -155,7 +155,7 @@ mount -o $BTRFS_OPTS,subvol=@ /dev/mapper/arch-linux /mnt
 ```
 Könyvtárak létrehozása a csatolandó subvolume-oknak.
 ```
-mkdir -p /mnt/{boot/efi,home,opt,srv,var/cache,/var/lib/libvirt/images,var/log,var/spool,var/tmp,.snapshots,media/extra-data}
+mkdir -p /mnt/{boot/efi,home,opt,srv,var/cache,/var/lib/libvirt/images,var/log,var/spool,var/tmp,.snapshots,efi}
 ```
 Subvolume-ok felcsatolása
 ```
@@ -176,7 +176,7 @@ mkfs.fat -F32 /dev/nvme0n1p1
 ```
 ESP partíció csatolása az efi könyvtárra.
 ```
-mount /dev/nvme0n1p1 /mnt/boot/efi
+mount /dev/nvme0n1p1 /mnt/efi
 ```
 ### Pacman PGP kulcsok beszerzése
 ```
@@ -185,7 +185,7 @@ pacman-key --populate
 ```
 ### Alap rendszer telepítése
 ```
-pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware btrfs-progs amd-ucode sudo pacman neovim dracut efibootmgr systemd efivar sbsigntools git binutils openssh networkmanager
+pacstrap /mnt base base-devel linux-zen linux-zen-headers linux-firmware btrfs-progs snapper limine amd-ucode sudo pacman neovim efibootmgr systemd efivar sbsigntools git binutils openssh networkmanager
 ```
 Hozzuk létre az fstab-ot.
 ```
