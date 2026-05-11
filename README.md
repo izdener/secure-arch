@@ -376,15 +376,15 @@ mesa lib32-mesa mesa-utils libva-mesa-driver lib32-libva-mesa-driver \
 vulkan-radeon lib32-vulkan-radeon vulkan-tools vulkan-validation-layers \
 xf86-input-libinput xf86-video-amdgpu pipewire pipewire-alsa pipewire-audio \
 pipewire-pulse wireplumber alsa-utils gst-libav sof-firmware gst-plugins-ugly \
-gst-plugins-bad gst-plugins-good bluez bluez-utils \
-steam gamemode lib32-gamemode lib32-alsa-plugins lib32-libpulse \
-hyprland hyprlock hyprpicker hyprpaper polkit hyprpolkitagent dunst \
-wayland-protocols qt5-wayland qt6-wayland gtk3 waybar wofi uwsm libnewt \
-wl-clipboard xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk \
-xdg-utils xdg-user-dirs dosfstools sysc-greet-hyprland \
+gst-plugins-bad gst-plugins-good bluez bluez-utils udiskie gparted \
+brightnessctl playerctl grim slurp steam gamemode lib32-gamemode \
+lib32-alsa-plugins lib32-libpulse hyprland hyprlock hyprpicker hyprpaper \
+polkit hyprpolkitagent dunst wayland-protocols qt5-wayland qt6-wayland gtk3 \
+waybar wofi uwsm libnewt wl-clipboard xdg-desktop-portal xdg-desktop-portal-hyprland \
+xdg-desktop-portal-gtk xdg-utils xdg-user-dirs dosfstools sysc-greet-hyprland \
 man-db man-pages tldr tldr tree fd fzf ripgrep kitty yazi \
 noto-fonts noto-fonts-emoji ttf-nerd-fonts-symbols ttf-firacode-nerd \
-qutebrowser zen-browser-bin openssh \
+qutebrowser zen-browser-bin openssh avahi ffmpegthumbnailer ttf-liberation \
 btop htop cliphist keepassxc bluetui wiremix webcord
 ```
 ---
