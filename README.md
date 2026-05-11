@@ -1,6 +1,7 @@
 # secure-arch - _Erősített Arch Linux telepítési útmutató._
    - [btrfs](https://btrfs.readthedocs.io/en/latest/): Egy sokoldalú, másolatkészítés-alapú (copy-on-write) fájlrendszer Linuxhoz.  
-   - [encryption](https://gitlab.com/cryptsetup/cryptsetup/): LUKS 2 lemeztitkosítás a dm-crypt kernelmodulra építve.
+   - limine bootloader és snapper integráció
+   - [encryption](https://gitlab.com/cryptsetup/cryptsetup/): LUKS 2 lemeztitkosítás a sd-crypt kernelmodulra építve.
    - [zram](https://www.kernel.org/doc/html/v5.9/admin-guide/blockdev/zram.html): RAM tömörítés a memória megtakarítása érdekében.
    - [hyprland](https://hypr.land/): Modern, látványos Wayland-kompozitor.
    - [secure boot](https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot): Biztonsági funkció, amely csak megbízható, aláírt szoftverek elindítását engedélyezi rendszerindításkor.
@@ -302,6 +303,27 @@ timeout: 5
 ```
 (Ha a későbbiekben bármi mást - mondjuk efi-shell-t vagy memtestet akarunk hozzáadni, azokat is itt fogjuk tudni megtenni.)
 
+#### Limine Pacman hook
+Amikor frissül a Limine, akkor automatikus másolja a pacman a helyére a fájlt.
+
+```
+nvim /etc/pacman.d/hooks/99-limine.hook
+```
+Ezt másoljuk bele:
+```
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = limine              
+
+[Action]
+Description = Deploying Limine after upgrade...
+When = PostTransaction
+Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /efi/EFI/arch-limine/
+
+```
+
 ### Frissítsük az EFI Boot Entry-t manuálisan
 Listázzuk ki az elérhető EFI entryket:
 ```
@@ -321,211 +343,65 @@ vagy
 
 efibootmgr -o 0001,0000,0002
 ```
-Mindez attól függ, mit szeretnél bootolni - közvetlenül az UKIt, vagy a Systemd-bootmanagert. :)
+Mindez attól függ, mit szeretnél bootolni - közvetlenül az UKIt, vagy a Limine boot-managert. :)
 
-# Teljes asztali környezet telepítése és testreszabása | _mesa, pipewire, Hyprland_
+## Paru AUR helper telepítése
+Az Arch User Repository - röviden AUR hasznosságát nem lehet figyelmen kívül hagyni, így telepítsünk fel egy helpert, ami segít az ott lévő alkalmazások telepítésében.
 
-_az egész rendszer egyben:_
 ```
-pacman -S \
-mesa lib32-mesa mesa-utils vulkan-radeon lib32-vulkan-radeon \
-vulkan-tools vulkan-validation-layers libva-mesa-driver \
-lib32-libva-mesa-driver xf86-input-libinput xf86-video-amdgpu \
-\
-bluez bluez-utils bluetui qutebrowser zen-browser-bin \
-rpcbind openssh \
-\
-hyprland hyprlock hyprpicker hyprpolkitagent \
-wayland wayland-protocols qt5-wayland qt6-wayland \
-gtk3 waybar rofi wofi polkit polkit-gnome greetd \
-greetd-tuigreet uwsm ttf-nerd-fonts-symbols ttf-fira-code-nerd \
-\
-tldr tree cliphist fd fzf ripgrep btop btrfs-progs \
-snapper xdg-utils xdg-desktop-portal xdg-user-dirs \
-xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
-dosfstools \
-\
-man-db man-pages tldr kitty neovim lazygit \
-lua-language-server pyright keepassxc obsidian yazi \
-\
-gamemode lib32-gamemode steam lib32-alsa-plugins lib32-libpulse \
-pipewire pipewire-alsa pipewire-audio pipewire-pulse wireplumber \
-wiremix alsa-utils gst-libav gst-plugins-bad gst-plugins-good \
-sof-firmware gst-plugins-ugly obs-studio vesktop-bin
+git clone https://aur.archlinux.org/paru.git
+cd paru
+makepkg -si
 ```
+Ezek után a `pacman` helyett, használhatjuk a `paru`-t.
 
-## Külön modulokban:
-**Grafikus meghajtók (mesa, vulkan driverek)**
-```
-pacman -S \
-mesa lib32-mesa mesa-utils vulkan-radeon lib32-vulkan-radeon \
-vulkan-tools vulkan-validation-layers libva-mesa-driver \
-lib32-libva-mesa-driver xf86-input-libinput xf86-video-amdgpu
-```
+# Teljes asztali környezet telepítése és testreszabása: _mesa, pipewire, Hyprland_ használéatával
 
-**Hálózatkezelés és böngészők**
+## Pacman és Paru beállítások
+Engedélyeznünk hell a pacman multilib repo-t, és a parunál hogy az alkalmazások telepítésénél részesíste előnybe a tárolókban lévő programokat.
 ```
-pacman -S \
-bluez bluez-utils bluetui qutebrowser zen-browser-bin \
-rpcbind openssh
+nvim /etc/pacman.conf
 ```
-
-**Grafikus felület és Ablakkezelés**
+Kommenteld ki ezt a két sort:
 ```
-hyprland hyprlock hyprpicker hyprpolkitagent \
-wayland wayland-protocols qt5-wayland qt6-wayland \
-gtk3 waybar rofi wofi polkit polkit-gnome greetd \
-greetd-tuigreet uwsm ttf-nerd-fonts-symbols ttf-fira-code-nerd
-```
-
-**Rendszereszközök/Segédprogramok**
-```
-pacman -S \
-tldr tree cliphist fd fzf ripgrep btop btrfs-progs \
-snapper xdg-utils xdg-desktop-portal xdg-user-dirs \
-xdg-desktop-portal-gtk xdg-desktop-portal-hyprland \
-dosfstools
-```
-
-**Fejlesztői és Termelékenységi Eszközök**
-```
-pacman -S \
-man-db man-pages tldr kitty neovim lazygit \
-lua-language-server pyright keepassxc obsidian yazi
-```
-
-**Játékok, multimédia, kommunikáció**
-```
-pacman -S \
-gamemode lib32-gamemode steam lib32-alsa-plugins lib32-libpulse \
-pipewire pipewire-alsa pipewire-audio pipewire-pulse wireplumber \
-wiremix alsa-utils gst-libav gst-plugins-bad gst-plugins-good \
-sof-firmware gst-plugins-ugly obs-studio vesktop-bin
+[multilib]
+Include = /etc/pacman.d/mirrorlist
 ```
 
 
+_Rendszer telepítése:_
+```
+paru -S \
+mesa lib32-mesa mesa-utils libva-mesa-driver lib32-libva-mesa-driver \
+vulkan-radeon lib32-vulkan-radeon vulkan-tools vulkan-validation-layers \
+xf86-input-libinput xf86-video-amdgpu pipewire pipewire-alsa pipewire-audio \
+pipewire-pulse wireplumber alsa-utils gst-libav sof-firmware gst-plugins-ugly \
+gst-plugins-bad gst-plugins-good bluez bluez-utils \
+steam gamemode lib32-gamemode lib32-alsa-plugins lib32-libpulse \
+hyprland hyprlock hyprpicker hyprpaper polkit hyprpolkitagent dunst \
+wayland-protocols qt5-wayland qt6-wayland gtk3 waybar wofi uwsm libnewt \
+wl-clipboard xdg-desktop-portal xdg-desktop-portal-hyprland xdg-desktop-portal-gtk \
+xdg-utils xdg-user-dirs dosfstools sysc-greet-hyprland \
+man-db man-pages tldr tldr tree fd fzf ripgrep kitty yazi \
+noto-fonts noto-fonts-emoji ttf-nerd-fonts-symbols ttf-firacode-nerd \
+qutebrowser zen-browser-bin openssh \
+btop htop cliphist keepassxc bluetui wiremix webcord
+```
 ---
 
-## Login manager TUI-greet (greetd frontend)
-Állítsuk be a greetd konfigurációs fájlját hogy lássa az összes wayland session-t.
+## Login manager [sysc-greet](https://nomadcxx.github.io/sysc-greet/) (greetd frontend)
+A kompozitorunknak megfelelően be kell állítanunk a bejelentkező képernyőt. Mivel már előzőleg telepítettük, nincs más dolgunk, csak átállítani a billentyűzetkiosztást, és engedélyezni a szervízt.
 
+Állítsd át itt a billentyűzeted kiosztását:
 ```
-nvim /etc/greetd/config.toml
+nvim /etc/greetd/hyprland-greeter-config.conf
+```
 
-vt = 1
+Szervíz engedélyezése:
+```
+sudo systemctl enable greetd.service
+```
 
-[default_session]
-command = "tuigreet -w 80 --sessions /usr/share/wayland-sessions"
-
-user = "greeter"
-```
-Engedélyezzük a greetd szervizt
-```
-systemctl enable greetd.service
-```
-### Ha kettő vagy több monitort használsz
-Észre fogod venni, hogy csak egy frame buffer van mind a kettő (vagy több) monitorodra és elég bután néz ki az,  
-hogy a 2/4K-s monitorodon nem jó a loginmanager mérete. Ezt a `ddcutil` és `fbset` programok  
-használatával tudod kiküszöbölni. Szép megoldás? Nem. De határozottan működik.  
-_Ha két monitorod van, akkor egyet lekapcsolunk a bejelentkezésig. Ez készeríti majd a frame buffert hogy  
-az elérhető monitoron a legnagyobb felbontást használja. Nekem egy HD és egy 2K-s monitorom van,  
-ezen demonstrálom mit kell tenni._
-
-**1. Ha eddig nem tetted meg, telepítsd a szükséges programokat**
-```
-pacman -S ddcutil fbset
-```
-**2. Szerezzünk jogosulságokat az `i2c`-hez**
-```
-usermod -aG i2c $USER
-```
-**2.1. Nézzük meg hogy melyik monitor a display 1 vagy dispaly 2 (stb).**
-```
-ddcutil detect
-```
-**3. Hozzunk létre egy scriptet, ami standby módba teszi az egyik monitort login előtt**  
-_!!Nálam ez a HD lesz!!_
-```
-nvim /usr/local/bin/m-prelogin.sh
-
-#!/bin/sh
-
-# Monitor 1 (HD) - standby
-ddcutil setvcp D6 04 --display 1
-
-# Fő monitor felbontása
-fbset -xres 2560 -yres 1440
-
-```
-Tegyük futtathatóvá a scriptet
-```
-chmod +x /usr/local/bin/m-prelogin.sh
-```
-Hozzunk létre hozzá egy systemd unitot
-```
-nvim /etc/systemd/system/m-prelogin.service
-
-[Unit]
-Description=Set monitor standby and resolution before login
-After=multi-user.target
-Before=graphical.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/m-prelogin.sh
-RemainAfterExit=yes
-
-[Install]
-WantedBy=multi-user.target
-```
-Tegyük aktívvá:
-```
-sudo systemctl enable m-prelogin.service
-```
-**4. Hozzunk létre egy scriptet ami visszakapcsolja a monitort login után**
-_Ezt úgy állítottam be, hogy lekérdezze ki jelentkezik be -így ha több felhazsnáló is  
-van a gépen, mindenkinél működni fog._
-```
-nvim /usr/local/bin/m-postlogin.sh
-
-#!/bin/bash
-ddcutil setvcp D6 01 --display 1
-
-```
-Tegyük futtathatóva:
-```
-chmod +x /usr/local/bin/m-postlogin.sh
-``` 
-Hozzunk létre egy systemd unitot ehhez is.
-```
-nvim ~/.config/systemd/user/m-postlogin.service
-
-[Unit]
-Description=Enable second monitor after login
-After=graphical-session.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/local/bin/m-postlogin.sh
-
-[Install]
-WantedBy=default.target
-```
-Engedélyezzük:
-```
-systemctl --user daemon-reexec
-systemctl --user daemon-reload
-systemctl --user enable m-postlogin.service
-
-```
-Nézd meg, hogy a Linger=yes szerepel-e a loginctl-ben.
-```
-loginctl show-user $USER
-
-ha nem:
-
-sudo loginctl enable-linger $USER
-```
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
 
 (obs-gamecapture env OBS_VKCAPTURE=1 LD_PRELOAD="" XKB_DEFAULT_LAYOUT=hu gamescope -w 2560 -h 1440 -W 2560 -H 1440 -f --force-grab-cursor -- %command%)
