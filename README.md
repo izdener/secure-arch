@@ -321,7 +321,6 @@ Target = limine
 Description = Deploying Limine after upgrade...
 When = PostTransaction
 Exec = /usr/bin/cp /usr/share/limine/BOOTX64.EFI /efi/EFI/arch-limine/
-
 ```
 
 ### Frissítsük az EFI Boot Entry-t manuálisan
@@ -382,12 +381,11 @@ lib32-alsa-plugins lib32-libpulse hyprland hyprlock hyprpicker hyprpaper \
 polkit hyprpolkitagent dunst wayland-protocols qt5-wayland qt6-wayland gtk3 \
 waybar wofi uwsm libnewt wl-clipboard xdg-desktop-portal xdg-desktop-portal-hyprland \
 xdg-desktop-portal-gtk xdg-utils xdg-user-dirs dosfstools sysc-greet-hyprland \
-man-db man-pages tldr tldr tree fd fzf ripgrep kitty yazi \
+man-db man-pages tldr tldr tree fd fzf ripgrep kitty yazi power-profiles-daemon \
 noto-fonts noto-fonts-emoji ttf-nerd-fonts-symbols ttf-firacode-nerd \
 qutebrowser zen-browser-bin openssh avahi ffmpegthumbnailer ttf-liberation \
-btop htop cliphist keepassxc bluetui wiremix webcord
+zram-generator btop htop cliphist keepassxc bluetui wiremix webcord
 ```
----
 
 ## Login manager [sysc-greet](https://nomadcxx.github.io/sysc-greet/) (greetd frontend)
 A kompozitorunknak megfelelően be kell állítanunk a bejelentkező képernyőt. Mivel már előzőleg telepítettük, nincs más dolgunk, csak átállítani a billentyűzetkiosztást, és engedélyezni a szervízt.
@@ -401,6 +399,83 @@ Szervíz engedélyezése:
 ```
 sudo systemctl enable greetd.service
 ```
+
+## Power Profiles Daemon és rendszer finomhangolás
+A szükséges programot `power-profiles-daemon` már fentebb telepítettük, és csak engedélyeznünk kell.
+
+```
+sudo systemctl enable --now power-profiles-daemon
+```
+---
+# Mélyebb rendszer beállítások
+## Hasznos `sysctl` paraméterek
+Hozzunk létre ehhez egy gyűjtő fájlt a `/etc/sysctl.d/` könyvtárban. nevezzük el `70-system-settings.conf`-nak.
+```
+nvim /etc/sysctl.d/70-system-settings-conf
+```
+
+```
+#################################
+### Virtuális memória kezelés
+# Ez határozza meg hogy a rendszer mennyire aggresszívan használja a swap területet.
+# Ha NVME SSD-d van, akkor a 100 nagyon jó érték, főleg ha ZRAM-ot is beállítjuk.
+vm.swappiness = 100
+
+# Ez szabályozza, hogy a kernel mennyire szívesen tartja RAM-ban a fájlrendszer-struktúrákat
+# (könyvtárak, fájlinformációk - dentry/inode). Alapérték 100. Ez kicsit felgyorsítja a fájlok
+# keresését, így kevesebbek kell olvasni a lemezről.
+vm.vfs_cache_pressure = 50
+
+# Ez határozza meg hogy a kernel műveletenként hány memória oldalt olvasson be/írjon ki swapból/ba.
+# Mivel nincs mozgó alaktrész, nincs felpörgetési idő, ezért oldalanként fog történni a műveletsor.
+# Nagyjából 4 KB/page. SSD és zRAM esetében ez optimális.
+vm.page-cluster = 0
+
+#################################
+### Lemezműveletek (Dirty Pages)
+## Ezek olyan adatokat jelentenek, amik már megváltoztak, de még nem íródtak ki a lemezre.
+# Amint az írásra váró adatok mennyisége eléri a 256 MB-ot, a folyamat megáll, és kénytelen megvárni,
+# amíg az adatok kiíródnak a lemezre. Így a RAM kevésbé lesz tele adattal aminek lemezen a helye,
+# és így kisebb eséllyel lesz rendszer fagyás.
+vm.dirty_bytes = 268435456
+
+# Ez úgy működik nagyjából mint az előző beállítás, itt viszont a háttéradatok mozgatását szabályozza.
+# 65 MB = 67108864 byte
+vm.dirty_background_bytes = 67108864
+
+# Ezzel szabályozható hogy a kernel hány másodpercenként ellenőrizze hogy van-e kiírandó adat.
+# Az alapértelmezett érték 500, ezen érték emelése csökkenti a lemezműveletek számát, ami energiát
+# spórol - nagyon jó laptopoknál.
+vm.dirty_writeback_centisecs = 1500
+
+#################################
+### Rendszer és biztonság (Kernel)
+# Az nmi_watchdog egy "lefagyás figyelő". Én le szoktam kapcsolni - egyel kevesebb folyamat, ami
+# eszi az erőforrást. Általában ha stabil a rendszer, nem baj hogy nem megy.
+kernel.nmi_watchdog = 0
+
+# Ez a beállítás engedélyezi hogy átlak jogosultságú felhasználók is létre tudjanak hozni rootless
+# konténereket/izolációs egységeket pl. docker, bubblewrap, flatpak segítségével.
+kernel.unprivileged_userns_clone = 1
+
+# Ez eltűnteni a boot folyamatból az alacsony prioritású üzeneteket. Csak kritikus hibák látszódnak.
+kernel.printk = 3 3 3 3
+
+# Biztonsági beállítás, ami megakadályozza hogy felhasználók lássák a kernel memóriácímeit (pointers).
+# Megnehezíti a kernel elleni exploitok végrehajtását.
+kernel.kptr_restrict = 2
+
+#################################
+### Hálózat és fájlrendszer
+# Ez megnöveli a bejövő hálózati csomagok várólistáját - jó beállítás, ha gyorsa az internet kapcsolat.
+# Több ideje marad a processzornak a feldolgozásra, mielőtt a kernel kiszórná őket.
+net.core.netdev_max_backlog = 4096
+
+# Felemeli rendszerszinten az egyszerre megnyitható fájlok maximális számát.
+# Így nehezebb kifutni a descriptorokból.
+fs.file-max = 2097152
+```
+
 
 A secureboot és apparmor modulok a következő részben kerülnek tárgyalásra.
 
